@@ -1,0 +1,61 @@
+---
+
+- name: Set up a freeswitch build environment on a local virtual machine
+  hosts: fsbuild
+
+  tasks:
+    - name: Install utilities for terminal interaction
+      become: yes
+      apt: pkg={{ item }} state=latest update_cache=yes cache_valid_time=600
+      with_items:
+          - curl
+          - tmux
+          - python3-dev
+          - emacs-nox
+          - vim
+
+    - name: Install development dependencies from debian repos
+      become: yes
+      apt: pkg={{ item }} state=latest update_cache=yes cache_valid_time=600
+      with_items:
+          - xz-utils
+          - devscripts
+          - cowbuilder
+          - git
+          - screen
+          - autoconf
+          - libtool
+          - libtool-bin
+
+    - name: Make the working directory
+      file: state=directory path=/usr/src/freeswitch-debs owner=vagrant
+      become: yes
+
+    - name: Copy the user git config into the vm
+      copy:
+        src: "~/.gitconfig"
+        dest: "~/.gitconfig"
+
+    - name: Add Osmo latest key
+      become: yes
+      apt_key:
+        url: http://download.opensuse.org/repositories/network:/osmocom:/latest/Debian_8.0/Release.key
+        state: present
+
+    - name: Add osmo Debian 8 latest repo
+      become: yes
+      apt_repository:
+        repo: 'deb http://download.opensuse.org/repositories/network:/osmocom:/latest/Debian_8.0 ./'
+        update_cache: yes
+        mode: 664
+
+    # Mod SMPP is not built and released by freeswitch by default
+      because it relies on dependencies from the osmocom
+      repos. Install them here!
+
+    - name: Install mod_smpp external dependencies
+      become: yes
+      apt: pkg={{ item }} state=latest update_cache=yes cache_valid_time=600
+      with_items:
+          - libsmpp34-dev
+          - libsmpp1
